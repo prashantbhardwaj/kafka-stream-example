@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ModelDelivery {
-    private ModelOrder order;
-    private ModelPerson deliveredBy;
+public class ItemAddedInCart {
+    private int productId;
+    private int userId;
+    private int quantity;
 }

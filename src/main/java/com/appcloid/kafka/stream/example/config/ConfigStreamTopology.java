@@ -31,37 +31,56 @@ public class ConfigStreamTopology implements InitializingBean {
 
     public static final String IN_PERSONS = "persons";
     public static final String IN_PRODUCTS = "products";
-    public static final String IN_ORDERS = "orders";
+    public static final String IN_ITEMS = "cart_items";
 
     public static final String PRODUCT_INVENTORY_CACHE = "product_inventory";
 
     public static final String OUT_REJECTED_ORDERS = "rejected-orders";
     public static final String OUT_DELIVERIES = "deliveries";
     public static final String OUT_PRODUCT = "product_inventory";
+    public static final String OUT_ORDERS = "orders";
 
     public static Topology buildTopology() {
-        Serde<ModelDelivery> deliverySerdes = new JsonSerde<>(ModelDelivery.class);
-        Serde<ModelAddress> addressSerde = new JsonSerde<>(ModelAddress.class);
-        Serde<ModelPerson> personSerdes = new JsonSerde<>(ModelPerson.class);
-        Serde<ModelOrder> orderSerde = new JsonSerde<>(ModelOrder.class);
-        Serde<ModelProduct> productSerde = new JsonSerde<>(ModelProduct.class);
+        Serde<Delivery> deliverySerdes = new JsonSerde<>(Delivery.class);
+        Serde<Address> addressSerde = new JsonSerde<>(Address.class);
+        Serde<Person> personSerdes = new JsonSerde<>(Person.class);
+        Serde<Order> orderSerde = new JsonSerde<>(Order.class);
+        Serde<Product> productSerde = new JsonSerde<>(Product.class);
+        Serde<ItemAddedInCart> itemSerde = new JsonSerde<>(ItemAddedInCart.class);
 
-        Serde<String> keySerding = Serdes.String();
+        Serde<String> keySerde = Serdes.String();
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        KStream<String, ModelProduct> productStream = streamsBuilder
-                .stream(IN_PRODUCTS, Consumed.with(keySerding, productSerde))
+        KStream<String, Product> productStream = streamsBuilder
+                .stream(IN_PRODUCTS, Consumed.with(keySerde, productSerde))
                 .peek((k,v) -> LOGGER.info("Received product : {}", v))
                 .groupByKey()
                 //.groupBy((k,v) -> v.getId())
-                .aggregate(ModelProduct::new,
+                .aggregate(Product::new,
                         (key, value, aggregate) -> aggregate.process(value),
-                        Materialized.with(keySerding, productSerde))
+                        Materialized.with(keySerde, productSerde))
                 .toStream();
 
+        ValueJoiner<Product, Order, Product> productQuantityToOrderJoiner =
+                (product, order) -> product.deductOrderedQuantity(order);
+
+        ValueJoiner<ItemAddedInCart, Product, Order> orderQualifier =
+                (item, product) -> product != null ? product.checkIfOrderQuantityAvailable(item) : Order.builder().state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build();
+
+        KTable<String, Product> productKTable = productStream.toTable();
+
+        streamsBuilder.stream(IN_ITEMS, Consumed.with(keySerde, itemSerde))
+                .leftJoin(
+                        productKTable,
+                        orderQualifier,
+                        Joined.with(keySerde, itemSerde, productSerde)
+                )
+                .peek((k,v) -> LOGGER.info("Received items {} : {}", k, v))
+                .to(OUT_REJECTED_ORDERS, Produced.with(keySerde, orderSerde));
+
         productStream
-                .to(OUT_PRODUCT, Produced.with(keySerding, productSerde));
+                .to(OUT_PRODUCT, Produced.with(keySerde, productSerde));
 
         return streamsBuilder.build();
     }

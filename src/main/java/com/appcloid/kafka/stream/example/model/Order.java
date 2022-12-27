@@ -11,14 +11,14 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ModelOrder {
+public class Order {
     private int id;
-    private List<ModelProduct> products;
-    private ModelPerson user;
+    private List<Product> products;
+    private Person user;
     @Builder.Default
     public OrderState state = OrderState.CREATED;
 
     public static enum OrderState {
-        CREATED, DELIVERY_ASSIGNED, REJECTED
+        CREATED, APPROVED, DELIVERY_ASSIGNED, REJECTED_QTY_UNAVAILABLE, REJECTED_PRODUCT_NOT_FOUND
     }
 }

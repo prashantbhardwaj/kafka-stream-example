@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ModelPerson {
-    private int id;
-    private String name;
-    private ModelAddress address;
+public class Delivery {
+    private Order order;
+    private Person deliveredBy;
 }
