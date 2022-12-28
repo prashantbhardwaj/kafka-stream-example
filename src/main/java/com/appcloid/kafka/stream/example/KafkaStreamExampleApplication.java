@@ -16,9 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.binder.kafka.streams.InteractiveQueryService;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,6 +30,7 @@ import java.util.stream.StreamSupport;
 @SpringBootApplication
 public class KafkaStreamExampleApplication {
 	private static final Logger LOGGER = LoggerFactory.getLogger(KafkaStreamExampleApplication.class);
+	private static final String PRODUCT_AGGREGATE_STATE_STORE = "product_aggregate_state";
 
 	@Autowired
 	private InteractiveQueryService interactiveQueryService;
@@ -58,28 +59,29 @@ public class KafkaStreamExampleApplication {
 					.groupByKey()
 					.aggregate(Product::new,
 							(key, value, aggregate) -> aggregate.process(value),
-							Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as("aggregated_products_new").withValueSerde(productEventSerde)//.withKeySerde(keySerde)
+							Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as(PRODUCT_AGGREGATE_STATE_STORE).withValueSerde(productEventSerde)//.withKeySerde(keySerde)
+							// because keySerde is configured in application.properties
 					);
 		}
 	}
 
 	@RestController
-	public class FooController {
+	public class ProductAggregateDetailsController {
 
-		@RequestMapping("/events")
+		@RequestMapping("/products")
 		public List<Product> events() {
 
 			final ReadOnlyKeyValueStore<String, Product> topFiveStore =
-					interactiveQueryService.getQueryableStore("aggregated_products_new", QueryableStoreTypes.<String, Product>keyValueStore());
+					interactiveQueryService.getQueryableStore(PRODUCT_AGGREGATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
 			Iterable<KeyValue<String, Product>> iterable = () -> topFiveStore.all();
 			return StreamSupport.stream(iterable.spliterator(), false).map(kv -> kv.value).collect(Collectors.toList());
 		}
 
-		@RequestMapping("/events/{product_id}")
-		public Product eventByProductId(String productId) {
+		@RequestMapping("/products/{product_id}")
+		public Product eventByProductId(@PathVariable("product_id") String productId) {
 
 			final ReadOnlyKeyValueStore<String, Product> topFiveStore =
-					interactiveQueryService.getQueryableStore("aggregated_products_new", QueryableStoreTypes.<String, Product>keyValueStore());
+					interactiveQueryService.getQueryableStore(PRODUCT_AGGREGATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
 			return topFiveStore.get(productId);
 		}
 	}
