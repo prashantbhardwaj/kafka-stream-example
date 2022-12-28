@@ -19,6 +19,20 @@ public class Order {
     public OrderState state = OrderState.CREATED;
 
     public static enum OrderState {
-        CREATED, APPROVED, DELIVERY_ASSIGNED, REJECTED_QTY_UNAVAILABLE, REJECTED_PRODUCT_NOT_FOUND
+        CREATED(false),
+        APPROVED(false),
+        DELIVERY_ASSIGNED(false),
+        REJECTED_QTY_UNAVAILABLE(true),
+        REJECTED_PRODUCT_NOT_FOUND(true);
+
+        private boolean isRejected;
+
+        OrderState(boolean rejected){
+            this.isRejected = rejected;
+        }
+
+        public boolean isRejected(){
+            return this.isRejected;
+        }
     }
 }
