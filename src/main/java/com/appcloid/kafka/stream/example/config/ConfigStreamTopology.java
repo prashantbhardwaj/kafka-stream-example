@@ -13,10 +13,12 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.Properties;
 
+@Profile("without-spring-stream")
 @Service
 public class ConfigStreamTopology implements InitializingBean {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigStreamTopology.class);
@@ -76,7 +78,8 @@ public class ConfigStreamTopology implements InitializingBean {
                         orderQualifier,
                         Joined.with(keySerde, itemSerde, productSerde)
                 )
-                .peek((k,v) -> LOGGER.info("Received items {} : {}", k, v))
+                .peek((k,v) -> LOGGER.info("Received order {} : {}", k, v))
+                .filter((k, o) -> o.getState().isRejected())
                 .to(OUT_REJECTED_ORDERS, Produced.with(keySerde, orderSerde));
 
         productStream
