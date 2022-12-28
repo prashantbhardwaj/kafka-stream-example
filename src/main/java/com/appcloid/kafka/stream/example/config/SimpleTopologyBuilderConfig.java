@@ -20,8 +20,8 @@ import java.util.Properties;
 
 @Profile("without-spring-stream")
 @Service
-public class ConfigStreamTopology implements InitializingBean {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigStreamTopology.class);
+public class SimpleTopologyBuilderConfig implements InitializingBean {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SimpleTopologyBuilderConfig.class);
 
 
     @Override
