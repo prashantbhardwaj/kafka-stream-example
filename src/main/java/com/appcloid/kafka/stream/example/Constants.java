@@ -6,7 +6,9 @@ import org.apache.kafka.common.serialization.Serdes;
 
 public class Constants {
     public static final String PRODUCT_AGGREGATE_STATE_STORE = "product_aggregate_state";
-    public static final String OUT_REJECTED_ORDERS = "rejected_orders";
+
+    public static final String OUT_REJECTED_ORDERS_TOPIC = "rejected_orders";
+    public static final String OUT_APPROVED_ORDERS_TOPIC = "approved_orders";
 
     public static final Serde<Delivery> DELIVERY_SERDE = new JsonSerde<>(Delivery.class);
     public static final Serde<Address> ADDRESS_SERDE = new JsonSerde<>(Address.class);

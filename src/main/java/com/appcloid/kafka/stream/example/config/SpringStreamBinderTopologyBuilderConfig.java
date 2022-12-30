@@ -3,6 +3,7 @@ package com.appcloid.kafka.stream.example.config;
 import com.appcloid.kafka.stream.example.Constants;
 import com.appcloid.kafka.stream.example.model.ItemAddedInCart;
 import com.appcloid.kafka.stream.example.model.Order;
+import com.appcloid.kafka.stream.example.model.Person;
 import com.appcloid.kafka.stream.example.model.Product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serde;
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.appcloid.kafka.stream.example.Constants.PRODUCT_AGGREGATE_STATE_STORE;
@@ -24,6 +26,11 @@ import static com.appcloid.kafka.stream.example.Constants.PRODUCT_AGGREGATE_STAT
 public class SpringStreamBinderTopologyBuilderConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpringStreamBinderTopologyBuilderConfig.class);
 
+    /**
+     * This stream processing acts on products and aggregate them on product_id which is coming as key of the message.
+     * Product with aggregated quantity is then held in state_store, which is kept in a Kafka topic.
+     * @return
+     */
     @Bean
     public Function<KStream<String, Product>, KTable<String, Product>> aggregateProducts() {
         // Spring module for kafka stream has JsonSerde, while we are using our own
@@ -40,6 +47,14 @@ public class SpringStreamBinderTopologyBuilderConfig {
                 );
     }
 
+    /**
+     * This stream processing acts on the cart item events which are getting generated when user is adding items in the cart;
+     * Stream is then joined with the aggregated_product state to check whether the item quantity selected by the user is available or not
+     * Rejected Items are sent on a kafka topic (OUT_REJECTED_ORDERS_TOPIC);
+     * Items can be rejected because either selected product is not stored in the state or selected quantity is not available.
+     * Approved Items are sent on a kafka topic (OUT_APPROVED_ORDERS_TOPIC);
+     * @return
+     */
     @Bean
     public BiConsumer<KStream<String, ItemAddedInCart>, KTable<String, Product>> processCartItem(){
         return (cartItem, aggregatedProduct) -> cartItem
@@ -50,7 +65,32 @@ public class SpringStreamBinderTopologyBuilderConfig {
                         Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE)
                 )
                 .peek((k,v) -> LOGGER.info("for item key [{}], created order [{}]", k, v))
-                .filter((k, o) -> o.getState().isRejected())
-                .to(Constants.OUT_REJECTED_ORDERS, Produced.with(Constants.KEY_SERDE, Constants.ORDER_SERDE));
+                .split()
+                .branch((k, o) -> o.getState().isRejected(), Branched.<String, Order>withConsumer(str -> str.to(Constants.OUT_REJECTED_ORDERS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ORDER_SERDE))).withName(Constants.OUT_REJECTED_ORDERS_TOPIC))
+                .defaultBranch(Branched.<String, Order>withConsumer(str -> str.to(Constants.OUT_APPROVED_ORDERS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ORDER_SERDE))).withName(Constants.OUT_APPROVED_ORDERS_TOPIC))
+                //.values().toArray(new KStream(0)); // if you are returning a BiFunction of <KStream<String, ItemAddedInCart>, KTable<String, Product>, KStream<String, Order>>
+        ;
+    }
+
+    /**
+     * Approved orders should be enriched with User details which also includes the address of the user
+     * @return
+     */
+    @Bean
+    public BiFunction<KStream<String, Order>, KTable<String, Person>, KTable<String, Order>> enrichedOrders(){
+        return (order, person) -> order
+                .peek((k,v) -> LOGGER.info("processing approved order with key [{}], and value [{}]", k, v))
+                .toTable();
+    }
+
+    /**
+     * Enriched Orders should then be assigned to a delivery person
+     * @return
+     */
+    @Bean
+    public BiFunction<KStream<String, Order>, KTable<String, Person>, KTable<String, Order>> deliveryAssigned(){
+        return (order, person) -> order
+                .peek((k,v) -> LOGGER.info("processing enriched order with key [{}], and value [{}]", k, v))
+                .toTable();
     }
 }
