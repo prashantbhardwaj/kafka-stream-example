@@ -6,8 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
-import java.util.UUID;
+import java.util.*;
 
 @Builder
 @Data
@@ -27,8 +28,10 @@ public class Product {
     }
 
     public Product deductOrderedQuantity(Order order) {
-        if (order.getProducts().contains(this)){
-            int quantityOrdered = order.getProducts().stream().filter(o -> o.getId() == this.id).map(Product::getQuantity).findAny().orElse(0);
+        if (!CollectionUtils.isEmpty(order.getProducts()) && order.getProducts().containsValue(this)){
+            int quantityOrdered = order.getProducts().values().stream()
+                    .filter(o -> o.getId() == this.id)
+                    .map(Product::getQuantity).findAny().orElse(0);
             this.quantity = this.quantity - quantityOrdered;
         }
 
@@ -37,7 +40,13 @@ public class Product {
 
     public Order checkIfOrderQuantityAvailable(ItemAddedInCart itemAddedInCart) {
         LOG.info(this.toString());
-        Order.OrderBuilder order = Order.builder().id(UUID.randomUUID().hashCode());
+        Person user = Person.builder().id(itemAddedInCart.getUserId()).build();
+        Product copyProduct = this.copy();
+        Map<Integer, Product> products = new HashMap<>();
+        products.put(copyProduct.id, copyProduct);
+
+        Order.OrderBuilder order = Order.builder().id(UUID.randomUUID().hashCode()).user(user);
+
         if (itemAddedInCart.getProductId() == this.id){
             if(itemAddedInCart.getQuantity() > this.quantity){
                 return order.state(Order.OrderState.REJECTED_QTY_UNAVAILABLE).build();
@@ -47,7 +56,8 @@ public class Product {
         } else {
             return order.state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build();
         }
-        return order.state(Order.OrderState.APPROVED).build();
+
+        return order.products(products).state(Order.OrderState.APPROVED).build();
     }
 
     public boolean equals(Object product){
@@ -59,5 +69,9 @@ public class Product {
 
     public int hashCode(){
         return new Integer(this.id).hashCode();
+    }
+
+    private Product copy(){
+        return Product.builder().id(this.id).name(this.name).build();
     }
 }
