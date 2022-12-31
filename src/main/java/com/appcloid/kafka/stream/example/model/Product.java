@@ -38,17 +38,17 @@ public class Product {
         return this;
     }
 
-    public Order checkIfOrderQuantityAvailable(ItemAddedInCart itemAddedInCart) {
+    public Order checkIfOrderQuantityAvailable(CartItem cartItem) {
         LOG.info(this.toString());
-        Person user = Person.builder().id(itemAddedInCart.getUserId()).build();
+        Person user = Person.builder().id(cartItem.getUserId()).build();
         Product copyProduct = this.copy();
         Map<Integer, Product> products = new HashMap<>();
         products.put(copyProduct.id, copyProduct);
 
         Order.OrderBuilder order = Order.builder().id(UUID.randomUUID().hashCode()).user(user);
 
-        if (itemAddedInCart.getProductId() == this.id){
-            if(itemAddedInCart.getQuantity() > this.quantity){
+        if (cartItem.getProductId() == this.id){
+            if(cartItem.getQuantity() > this.quantity){
                 return order.state(Order.OrderState.REJECTED_QTY_UNAVAILABLE).build();
             } /**else {
                 this.quantity = this.quantity - itemAddedInCart.getQuantity();

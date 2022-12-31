@@ -1,7 +1,7 @@
 package com.appcloid.kafka.stream.example.config;
 
 import com.appcloid.kafka.stream.example.Constants;
-import com.appcloid.kafka.stream.example.model.ItemAddedInCart;
+import com.appcloid.kafka.stream.example.model.CartItem;
 import com.appcloid.kafka.stream.example.model.Order;
 import com.appcloid.kafka.stream.example.model.Person;
 import com.appcloid.kafka.stream.example.model.Product;
@@ -57,7 +57,7 @@ public class SpringStreamBinderTopologyBuilderConfig {
      * @return
      */
     @Bean
-    public BiFunction<KStream<String, ItemAddedInCart>, KTable<String, Product>, KStream<String, Order>[]> processCartItem(){
+    public BiFunction<KStream<String, CartItem>, KTable<String, Product>, KStream<String, Order>[]> processCartItem(){
         return (cartItem, aggregatedProduct) -> cartItem
                 .peek((k, v) -> LOGGER.info("Item in cart received with key [{}] and value [{}]", k, v))
                 .leftJoin(

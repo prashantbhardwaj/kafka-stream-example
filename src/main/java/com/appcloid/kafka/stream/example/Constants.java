@@ -22,7 +22,7 @@ public class Constants {
     public static final Serde<Person> PERSON_SERDE = new JsonSerde<>(Person.class);
     public static final Serde<Order> ORDER_SERDE = new JsonSerde<>(Order.class);
     public static final Serde<Product> PRODUCT_SERDE = new JsonSerde<>(Product.class);
-    public static final Serde<ItemAddedInCart> ITEM_SERDE = new JsonSerde<>(ItemAddedInCart.class);
+    public static final Serde<CartItem> ITEM_SERDE = new JsonSerde<>(CartItem.class);
     public static final Serde<String> KEY_SERDE = Serdes.String();
 
 

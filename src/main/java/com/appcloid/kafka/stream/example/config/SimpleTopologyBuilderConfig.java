@@ -48,7 +48,7 @@ public class SimpleTopologyBuilderConfig implements InitializingBean {
         Serde<Person> personSerdes = new JsonSerde<>(Person.class);
         Serde<Order> orderSerde = new JsonSerde<>(Order.class);
         Serde<Product> productSerde = new JsonSerde<>(Product.class);
-        Serde<ItemAddedInCart> itemSerde = new JsonSerde<>(ItemAddedInCart.class);
+        Serde<CartItem> itemSerde = new JsonSerde<>(CartItem.class);
 
         Serde<String> keySerde = Serdes.String();
 
@@ -67,7 +67,7 @@ public class SimpleTopologyBuilderConfig implements InitializingBean {
         ValueJoiner<Product, Order, Product> productQuantityToOrderJoiner =
                 (product, order) -> product.deductOrderedQuantity(order);
 
-        ValueJoiner<ItemAddedInCart, Product, Order> orderQualifier =
+        ValueJoiner<CartItem, Product, Order> orderQualifier =
                 (item, product) -> product != null ? product.checkIfOrderQuantityAvailable(item) : Order.builder().state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build();
 
         KTable<String, Product> productKTable = productStream.toTable();
