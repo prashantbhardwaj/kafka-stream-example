@@ -43,12 +43,39 @@ public class Order {
             }
         }
 
-        return null;
+        return this;
+    }
+
+    public Order addCartItem(CartItem cartItem) {
+        if(this.id == 0){
+            this.id = UUID.randomUUID().hashCode();
+        }
+
+        if(this.products == null){
+            this.products = new HashMap<>();
+        }
+
+        if(this.user == null){
+            this.user = new Person();
+        }
+
+        this.user.setId(cartItem.getUserId());
+
+        if(this.products.containsKey(cartItem.getProductId())){
+            Product existingProduct = this.products.get(cartItem.getProductId());
+            existingProduct.setQuantity(existingProduct.getQuantity() + cartItem.getQuantity());
+            this.products.put(cartItem.getProductId(), existingProduct);
+        } else {
+            this.products.put(cartItem.getProductId(), Product.builder().id(cartItem.getProductId()).quantity(cartItem.getQuantity()).build());
+        }
+
+        return this;
     }
 
     public static enum OrderState {
         CREATED(false, true),
         APPROVED(false, true),
+        PAID(false, false),
         DELIVERY_ASSIGNED(false, false),
         REJECTED_QTY_UNAVAILABLE(true, false),
         REJECTED_PRODUCT_NOT_FOUND(true, false),

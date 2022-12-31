@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
-import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -57,18 +56,18 @@ public class SpringStreamBinderTopologyBuilderConfig {
      * @return
      */
     @Bean
-    public BiFunction<KStream<String, CartItem>, KTable<String, Product>, KStream<String, Order>[]> processCartItem(){
+    public BiFunction<KStream<String, CartItem>, KTable<String, Product>, KStream<String, CartItem>[]> processCartItem(){
         return (cartItem, aggregatedProduct) -> cartItem
                 .peek((k, v) -> LOGGER.info("Item in cart received with key [{}] and value [{}]", k, v))
                 .leftJoin(
                         aggregatedProduct,
-                        (item, product) -> product != null ? product.checkIfOrderQuantityAvailable(item) : Order.builder().id(UUID.randomUUID().hashCode()).state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build(),
-                        Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE, Constants.ORDER_STATE_STORE)
+                        (i, p) -> p.checkIfOrderQuantityAvailable(i),
+                        Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE)
                 )
                 .peek((k,v) -> LOGGER.info("for item key [{}], created order [{}]", k, v))
                 .split()
-                .branch((k, o) -> o.getState().isRejected(), Branched.<String, Order>withConsumer(str -> str.to(Constants.OUT_REJECTED_ORDERS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ORDER_SERDE))).withName(Constants.OUT_REJECTED_ORDERS_TOPIC))
-                .defaultBranch(Branched.<String, Order>withConsumer(str -> str.to(Constants.OUT_APPROVED_ORDERS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ORDER_SERDE))).withName(Constants.OUT_APPROVED_ORDERS_TOPIC))
+                .branch((k, o) -> o.getState().isRejected(), Branched.<String, CartItem>withConsumer(str -> str.to(Constants.OUT_REJECTED_CART_ITEMS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ITEM_SERDE))).withName(Constants.OUT_REJECTED_CART_ITEMS_TOPIC))
+                .defaultBranch(Branched.<String, CartItem>withConsumer(str -> str.to(Constants.OUT_APPROVED_CART_ITEMS_TOPIC, Produced.with(Constants.KEY_SERDE, Constants.ITEM_SERDE))).withName(Constants.OUT_APPROVED_CART_ITEMS_TOPIC))
                 .values()
                 .toArray(new KStream[0]); // if you are returning a BiFunction of <KStream<String, ItemAddedInCart>, KTable<String, Product>, KStream<String, Order>>
     }
@@ -78,14 +77,15 @@ public class SpringStreamBinderTopologyBuilderConfig {
      * @return
      */
     @Bean
-    public Function<KStream<String, Order>, KStream<String, Order>> aggregateOpenOrdersByUserId(){
-        return approvedOrder -> approvedOrder
-                .peek((k,v) -> LOGGER.info("processing approved order with key [{}], and value [{}]", k, v))
-                .filter((k, o) -> o.getState().isOpen() || o.getUser() == null)
-                .groupBy((k, o) -> o.getUser().getId())
+    public Function<KStream<String, CartItem>, KStream<String, Order>> aggregateCartItemsByUserId(){
+        return approvedCartItems -> approvedCartItems
+                .peek((k,v) -> LOGGER.info("processing approved cart items with key [{}], and value [{}]", k, v))
+                .filter((k, cartItem) -> !cartItem.getState().isRejected() && cartItem.getUserId() != 0)
+                .groupBy((k, o) -> String.valueOf(o.getUserId()))
                 .aggregate(
                         Order::new,
-                        (key, value, aggregate) -> aggregate.merge(value)
+                        (key, value, aggregate) -> aggregate.addCartItem(value),
+                        Materialized.<String, Order, KeyValueStore<Bytes, byte[]>>as(Constants.ORDER_STATE_STORE).withValueSerde(Constants.ORDER_SERDE)
                 )
                 .toStream((k, v) -> String.valueOf(v.getId()))
                 .peek((k,v) -> LOGGER.info("order aggregated with key [{}], and value [{}]", k, v));

@@ -13,6 +13,8 @@ public class Constants {
     public static final String ORDER_STATE_STORE = "order_state_store";
 
     // topics
+    public static final String OUT_REJECTED_CART_ITEMS_TOPIC = "rejected_cart_items";
+    public static final String OUT_APPROVED_CART_ITEMS_TOPIC = "approved_cart_items";
     public static final String OUT_REJECTED_ORDERS_TOPIC = "rejected_orders";
     public static final String OUT_APPROVED_ORDERS_TOPIC = "approved_orders";
 

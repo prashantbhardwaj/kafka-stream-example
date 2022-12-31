@@ -68,7 +68,7 @@ public class SimpleTopologyBuilderConfig implements InitializingBean {
                 (product, order) -> product.deductOrderedQuantity(order);
 
         ValueJoiner<CartItem, Product, Order> orderQualifier =
-                (item, product) -> product != null ? product.checkIfOrderQuantityAvailable(item) : Order.builder().state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build();
+                (item, product) -> product != null ? product.checkIfOrderQuantityAvailableAndCreateOrder(item) : Order.builder().state(Order.OrderState.REJECTED_PRODUCT_NOT_FOUND).build();
 
         KTable<String, Product> productKTable = productStream.toTable();
 

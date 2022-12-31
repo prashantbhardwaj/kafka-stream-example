@@ -38,7 +38,7 @@ public class Product {
         return this;
     }
 
-    public Order checkIfOrderQuantityAvailable(CartItem cartItem) {
+    public Order checkIfOrderQuantityAvailableAndCreateOrder(CartItem cartItem) {
         LOG.info(this.toString());
         Person user = Person.builder().id(cartItem.getUserId()).build();
         Product copyProduct = this.copy();
@@ -58,6 +58,24 @@ public class Product {
         }
 
         return order.products(products).state(Order.OrderState.APPROVED).build();
+    }
+
+    public CartItem checkIfOrderQuantityAvailable(CartItem cartItem) {
+        LOG.info(this.toString());
+
+        cartItem.setState(CartItem.CartItemState.ACCEPTED);
+
+        if (cartItem.getProductId() == this.id){
+            if(cartItem.getQuantity() > this.quantity){
+                cartItem.setState(CartItem.CartItemState.REJECTED_QTY_UNAVAILABLE);
+            } /**else {
+             this.quantity = this.quantity - itemAddedInCart.getQuantity();
+             }**/
+        } else {
+            cartItem.setState(CartItem.CartItemState.REJECTED_PRODUCT_NOT_FOUND);
+        }
+
+        return cartItem;
     }
 
     public boolean equals(Object product){

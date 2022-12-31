@@ -1,5 +1,7 @@
 package com.appcloid.kafka.stream.example.controller;
 
+import com.appcloid.kafka.stream.example.Constants;
+import com.appcloid.kafka.stream.example.model.Order;
 import com.appcloid.kafka.stream.example.model.Product;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -22,19 +24,28 @@ public class ProductAggregateDetailsController {
     private InteractiveQueryService interactiveQueryService;
 
     @RequestMapping("/products")
-    public List<Product> events() {
+    public List<Product> products() {
 
-        final ReadOnlyKeyValueStore<String, Product> topFiveStore =
+        final ReadOnlyKeyValueStore<String, Product> productStore =
                 interactiveQueryService.getQueryableStore(PRODUCT_AGGREGATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
-        Iterable<KeyValue<String, Product>> iterable = () -> topFiveStore.all();
+        Iterable<KeyValue<String, Product>> iterable = () -> productStore.all();
         return StreamSupport.stream(iterable.spliterator(), false).map(kv -> kv.value).collect(Collectors.toList());
     }
 
     @RequestMapping("/products/{product_id}")
-    public Product eventByProductId(@PathVariable("product_id") String productId) {
+    public Product productByProductId(@PathVariable("product_id") String productId) {
 
-        final ReadOnlyKeyValueStore<String, Product> topFiveStore =
+        final ReadOnlyKeyValueStore<String, Product> productStore =
                 interactiveQueryService.getQueryableStore(PRODUCT_AGGREGATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
-        return topFiveStore.get(productId);
+        return productStore.get(productId);
+    }
+
+    @RequestMapping("/orders")
+    public List<Order> orders() {
+
+        final ReadOnlyKeyValueStore<String, Order> orderStore =
+                interactiveQueryService.getQueryableStore(Constants.ORDER_STATE_STORE, QueryableStoreTypes.<String, Order>keyValueStore());
+        Iterable<KeyValue<String, Order>> iterable = () -> orderStore.all();
+        return StreamSupport.stream(iterable.spliterator(), false).map(kv -> kv.value).collect(Collectors.toList());
     }
 }
