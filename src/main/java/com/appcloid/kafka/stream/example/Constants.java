@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.Serdes;
 public class Constants {
     // state stores
     public static final String PRODUCT_AGGREGATE_STATE_STORE = "product_aggregate_state_store";
+    public static final String ALL_CART_ITEM_PRODUCT_JOIN_STORE = "all_cart_items_product_join_store";
     public static final String ORDER_STATE_STORE = "order_state_store";
 
     // topics
@@ -26,6 +27,7 @@ public class Constants {
     public static final Serde<Product> PRODUCT_SERDE = new JsonSerde<>(Product.class);
     public static final Serde<CartItem> ITEM_SERDE = new JsonSerde<>(CartItem.class);
     public static final Serde<String> KEY_SERDE = Serdes.String();
+
 
 
 }

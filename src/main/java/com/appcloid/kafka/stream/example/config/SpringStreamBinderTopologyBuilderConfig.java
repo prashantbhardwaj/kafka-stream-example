@@ -62,7 +62,7 @@ public class SpringStreamBinderTopologyBuilderConfig {
                 .leftJoin(
                         aggregatedProduct,
                         (i, p) -> p.checkIfOrderQuantityAvailable(i),
-                        Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE)
+                        Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE).withName(Constants.ALL_CART_ITEM_PRODUCT_JOIN_STORE)
                 )
                 .peek((k,v) -> LOGGER.info("for item key [{}], created order [{}]", k, v))
                 .split()
