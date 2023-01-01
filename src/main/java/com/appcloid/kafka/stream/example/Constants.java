@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.Serdes;
 public class Constants {
     // state stores
     public static final String PRODUCT_AGGREGATE_STATE_STORE = "product_aggregate_state_store";
+    public static final String PRODUCT_UPDATE_STATE_STORE = "product_update_state_store";
     public static final String ALL_CART_ITEM_PRODUCT_JOIN_STORE = "all_cart_items_product_join_store";
     public static final String ORDER_STATE_STORE = "order_state_store";
 

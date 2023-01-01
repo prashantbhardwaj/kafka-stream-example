@@ -21,6 +21,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.appcloid.kafka.stream.example.Constants.PRODUCT_AGGREGATE_STATE_STORE;
+import static com.appcloid.kafka.stream.example.Constants.PRODUCT_UPDATE_STATE_STORE;
 
 @Configuration
 public class SpringStreamBinderTopologyBuilderConfig {
@@ -61,7 +62,7 @@ public class SpringStreamBinderTopologyBuilderConfig {
                 .peek((k, v) -> LOGGER.info("Item in cart received with key [{}] and value [{}]", k, v))
                 .leftJoin(
                         aggregatedProduct,
-                        (i, p) -> p.checkIfOrderQuantityAvailable(i),
+                        (i, p) -> p != null ? p.checkIfOrderQuantityAvailable(i) : CartItem.builder().productId(i.getProductId()).quantity(i.getQuantity()).state(CartItem.CartItemState.REJECTED_PRODUCT_NOT_FOUND).build(),
                         Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE).withName(Constants.ALL_CART_ITEM_PRODUCT_JOIN_STORE)
                 )
                 .peek((k,v) -> LOGGER.info("for item key [{}], created order [{}]", k, v))
@@ -96,15 +97,16 @@ public class SpringStreamBinderTopologyBuilderConfig {
      * @return
      */
     @Bean
-    public BiConsumer<KStream<String, Order>, KTable<String, Product>> deductOrderQuantityFromProductState(){
-        return (approvedOrder, aggregatedProduct) -> approvedOrder
-                .peek((k,v) -> LOGGER.info("processing approved order with key [{}], and value [{}]", k, v))
+    public BiFunction<KStream<String, CartItem>, KTable<String, Product>, KTable<String, Product>> deductItemQuantityFromProductState(){
+        return (approvedItem, aggregatedProduct) -> approvedItem
+                .peek((k,v) -> LOGGER.info("processing approved cart item with key [{}], and value [{}]", k, v))
                 .leftJoin(
                         aggregatedProduct,
-                        (order, product) -> product.deductOrderedQuantity(order),
-                        Joined.with(Constants.KEY_SERDE, Constants.ORDER_SERDE, Constants.PRODUCT_SERDE, PRODUCT_AGGREGATE_STATE_STORE)
+                        (item, product) -> product.deductCartItemQuantity(item),
+                        Joined.with(Constants.KEY_SERDE, Constants.ITEM_SERDE, Constants.PRODUCT_SERDE, Constants.PRODUCT_UPDATE_STATE_STORE)
                 )
-                .peek((k,v) -> LOGGER.info("after processing order quantity updated on product with key [{}], and value [{}]", k, v));
+                .peek((k,v) -> LOGGER.info("after processing cart quantity updated on product with key [{}], and value [{}]", k, v))
+                .toTable(Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as(PRODUCT_UPDATE_STATE_STORE).withValueSerde(Constants.PRODUCT_SERDE));
     }
 
     /**

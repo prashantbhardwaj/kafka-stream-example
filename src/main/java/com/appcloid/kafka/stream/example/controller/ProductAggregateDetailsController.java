@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.appcloid.kafka.stream.example.Constants.PRODUCT_AGGREGATE_STATE_STORE;
+import static com.appcloid.kafka.stream.example.Constants.PRODUCT_UPDATE_STATE_STORE;
 
 @RestController
 public class ProductAggregateDetailsController {
@@ -38,6 +39,15 @@ public class ProductAggregateDetailsController {
         final ReadOnlyKeyValueStore<String, Product> productStore =
                 interactiveQueryService.getQueryableStore(PRODUCT_AGGREGATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
         return productStore.get(productId);
+    }
+
+    @RequestMapping("/updated-products")
+    public List<Product> productsFinal() {
+
+        final ReadOnlyKeyValueStore<String, Product> productStore =
+                interactiveQueryService.getQueryableStore(PRODUCT_UPDATE_STATE_STORE, QueryableStoreTypes.<String, Product>keyValueStore());
+        Iterable<KeyValue<String, Product>> iterable = () -> productStore.all();
+        return StreamSupport.stream(iterable.spliterator(), false).map(kv -> kv.value).collect(Collectors.toList());
     }
 
     @RequestMapping("/orders")

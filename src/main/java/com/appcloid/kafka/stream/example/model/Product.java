@@ -38,6 +38,11 @@ public class Product {
         return this;
     }
 
+    public Product deductCartItemQuantity(CartItem cartItem) {
+        this.quantity = this.quantity - cartItem.getQuantity();
+        return this;
+    }
+
     public Order checkIfOrderQuantityAvailableAndCreateOrder(CartItem cartItem) {
         LOG.info(this.toString());
         Person user = Person.builder().id(cartItem.getUserId()).build();
